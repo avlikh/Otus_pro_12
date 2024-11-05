@@ -1,0 +1,54 @@
+---
+- name   : Define variables
+  hosts  : localhost
+  gather_facts : no
+  vars_files:
+    - vars/vars_file.yml
+
+  tasks:
+    - name: Add hosts
+      add_host:
+        name         : "{{ item.name }}" 
+        ansible_host : "{{ item.ip }}"
+        groups       :  client_hosts
+      loop: "{{ client_hosts }}"
+
+- name: Part 2  Spawn
+  hosts: client_hosts
+  become: yes
+  vars_files:
+    - vars/vars_file.yml
+    
+  tasks:
+    - name: Install packages for spawn-fcgi
+      ansible.builtin.apt:
+        pkg:
+        - spawn-fcgi
+        - php
+        - php-cgi
+        - php-cli
+        - apache2
+        - libapache2-mod-fcgid
+
+    - name: Copy file fcgi.conf
+      ansible.builtin.copy:
+        src: "/ansible/files/etc/spawn-fcgi/fcgi.conf"
+        dest: /etc/spawn-fcgi/
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Copy file spawn-fcgi.service
+      ansible.builtin.copy:
+        src: "/ansible/files/etc/systemd/system/spawn-fcgi.service"
+        dest: /etc/systemd/system/
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Enable and start service spawn-fcgi.service
+      ansible.builtin.service:
+        name    : watchlog.timer
+        state   : started
+        enabled : yes
+...

@@ -1,0 +1,55 @@
+---
+- name   : Define variables
+  hosts  : localhost
+  gather_facts : no
+  vars_files:
+    - vars/vars_file.yml
+
+  tasks:
+    - name: Add hosts
+      add_host:
+        name         : "{{ item.name }}" 
+        ansible_host : "{{ item.ip }}"
+        groups       :  client_hosts
+      loop: "{{ client_hosts }}"
+
+- name: Part 3  Unit Nginx
+  hosts: client_hosts
+  become: yes
+  vars_files:
+    - vars/vars_file.yml
+    
+  tasks:
+    - name: Install nginx
+      ansible.builtin.apt:
+        pkg:
+        - nginx
+        state: present
+
+    - name: Copy file nginx@.service
+      ansible.builtin.copy:
+        src: "/ansible/files/etc/systemd/system/nginx@.service"
+        dest: /etc/systemd/system/nginx@.service
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Create file with variables for unit
+      ansible.builtin.template:
+        src: /ansible/templates/nginx-.conf.j2
+        dest: "/etc/nginx/nginx-{{ item.name }}.conf"
+        backup: true
+      loop: "{{ nginx.conf }}"
+
+    - name: Enable and start services
+      ansible.builtin.service:
+        name    : "nginx@{{ item.name }}"
+        state   : started
+      loop: "{{ nginx.conf }}"
+
+  handlers:
+    - name: Restart Nginx
+      ansible.builtin.systemd_service:
+        service: nginx
+        state: restarted
+...

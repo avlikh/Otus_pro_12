@@ -1,0 +1,24 @@
+# define hosts name and ips:
+# Please change name and ip to yours.
+# Note: If you have few hosts, please uncomment strings bellow and change name and ip to yours
+# you can add extra strings if it needed. 
+client_hosts:
+   - name: testdeb1
+     ip: 10.68.7.11
+#  - name: testdeb2
+#    ip: 10.68.7.12
+
+# define Alert word and log path here:
+watchlog:
+   WORD: ALERT
+   LOG: /var/log/watchlog.log
+
+# define Nginx ports and service names:
+nginx:
+  conf:
+    - name: first
+      port: 9001
+    - name: second
+      port: 9002
+
+

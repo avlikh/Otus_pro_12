@@ -1,0 +1,91 @@
+---
+- name   : Define variables
+  hosts  : localhost
+  gather_facts : no
+  vars_files:
+    - vars/vars_file.yml
+
+  tasks:
+    - name: Add hosts
+      add_host:
+        name         : "{{ item.name }}" 
+        ansible_host : "{{ item.ip }}"
+        groups       :  client_hosts
+      loop: "{{ client_hosts }}"
+
+- name: add correct repositories and upadte app cache
+  hosts: client_hosts
+  become: yes
+  tasks:
+    - name: copy sources.list
+      copy:
+        src   : /ansible/files/all/etc/apt/sources.list
+        dest  : /etc/apt/sources.list
+        owner : root
+        group : root
+        mode  : '0644'
+        backup: yes
+
+    - name: Update repositories cache and apt
+      ansible.builtin.apt:
+        update_cache: yes
+
+- name: Part 1  Monitoring unit
+  hosts: client_hosts
+  become: yes
+  vars_files:
+    - vars/vars_file.yml
+  tasks:
+    - name: Create file with variables for unit
+      ansible.builtin.template:
+        src: /ansible/templates/watchlog.j2
+        dest: /etc/default/watchlog
+        backup: true
+
+    - name: Create file watchlog.log
+      ansible.builtin.template:
+        src: /ansible/templates/watchlog.log.j2
+        dest: /var/log/watchlog.log
+        backup: true
+        owner: root
+        group: root
+        mode: '0744'
+
+    - name: Copy file watchlog.sh
+      ansible.builtin.copy:
+        src: "/ansible/files/opt/watchlog.sh"
+        dest: /opt/
+        owner: root
+        group: root
+        mode: '0744'
+
+    - name: Copy file watchlog.service
+      ansible.builtin.copy:
+        src: "/ansible/files/etc/systemd/system/watchlog.service"
+        dest: /etc/systemd/system/
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Copy file watchlog.timer
+      ansible.builtin.copy:
+        src: "/ansible/files/etc/systemd/system/watchlog.timer"
+        dest: /etc/systemd/system/
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Enable and start service watchlog.timer
+      ansible.builtin.service:
+        name    : watchlog.timer
+        state   : started
+        enabled : yes
+      notify:
+        - watchlog service initialization
+
+  handlers:
+    - name: watchlog service initialization
+      ansible.builtin.systemd_service:
+        service: watchlog.service
+        state: started
+...
